@@ -3,14 +3,15 @@
 #include <sstream>
 #include <string>
 #include <iomanip>
-#include <chrono>
 #include <cstdint>
+#include <windows.h>
 
 /*
  * info man
  * https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
  * https://en.wikipedia.org/wiki/Hash_function
- *
+ * https://cryptii.com/ lyginimui su kitais hash algo
+ * https://www.geeksforgeeks.org/cpp/cpp-bitwise-operators/
  */
 
 using std::string;
@@ -74,6 +75,8 @@ string toHex(const hash& h) {
 }
 
 int main(int argc, char** argv) {
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
     string data;
     if (argc > 1) {
         std::ifstream f(argv[1], std::ios::binary);
