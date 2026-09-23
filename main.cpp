@@ -1,103 +1,174 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <iomanip>
-#include <cstdint>
-#include <cstring>
-#include <windows.h>
-
-#ifdef _WIN32
-#include <io.h>
-#include <fcntl.h>
-#endif
-
 /*
- * info man
- * https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
- * https://en.wikipedia.org/wiki/Hash_function
- * https://cryptii.com/ lyginimui su kitais hash algo
- * https://www.geeksforgeeks.org/cpp/cpp-bitwise-operators/
+ * myhash.cpp — a strengthened 256-bit non-cryptographic hash.
+ *
+ * See readme.md for the full list of changes relative to the previous
+ * revision and for a description of the algorithm.
+ *
+ * Build (C++17):
+ *     c++ -O2 -std=c++17 -o myhash myhash.cpp
  */
 
-using std::string;
+#include <cstdint>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <string>
 
-struct hash { uint32_t w[8]; };
+#ifdef _WIN32
+#  include <io.h>
+#  include <fcntl.h>
+#  include <windows.h>
+#endif
 
-static uint32_t mix32(uint32_t x) {
-    x ^= x >> 7;
-    x *= 2146121517;
-    x ^= x >> 11;
-    x *= 2220872331;
-    x ^= x >> 17;
+// ============================================================================
+//  Public types
+// ============================================================================
+
+struct hash256 {
+    uint32_t w[8];   // 8 * 32 = 256 bits
+};
+
+// ============================================================================
+//  Primitives
+// ============================================================================
+
+namespace {
+
+// 32-bit rotate-left.  The mask keeps n == 0 well-defined.
+inline uint32_t rotl32(uint32_t x, int n) noexcept {
+    return (x << n) | (x >> ((32 - n) & 31));
+}
+
+// Pelle Evensen's "lowbias32" finalizer.
+// Source: https://mostlymangling.blogspot.com/2019/12/stronger-better-morer-moremur-better.html
+// Replaces the previous ad-hoc mix32() which used non-standard shift and
+// multiplier constants.  lowbias32 has excellent avalanche and a well-
+// documented track record in SMHasher-style tests.
+inline uint32_t mix32(uint32_t x) noexcept {
+    x ^= x >> 16;
+    x *= 0x7feb352dU;
+    x ^= x >> 15;
+    x *= 0x846ca68bU;
+    x ^= x >> 16;
     return x;
 }
 
-hash myHash(const uint8_t* data, size_t len) {
-    // prime skaiciai is http://compoasso.free.fr/primelistweb/page/prime/liste_online_en.php nuo 1530000
-    uint32_t s[8] = {
-        1530559,
-        1531487,
-        1532611,
-        1532723,
-        1532903,
-        1533083,
-        1533211,
-        1533397
-    };
+// Well-known constants, each documented at its source.
+constexpr uint32_t GOLDEN = 0x9e3779b9U;   // floor(2^32 / phi), Weyl sequence
+constexpr uint32_t PRIME1 = 0x85ebca6bU;   // MurmurHash3
+constexpr uint32_t PRIME2 = 0xc2b2ae35U;   // MurmurHash3
 
-    // Fix: guard the >> 32 so it is not UB on 32-bit size_t.
-    s[0] ^= (uint32_t)len;
-    s[1] ^= (uint32_t)((uint64_t)len >> 32);
+// Domain-separated IV.  Derived from the SHA-256 IV (fractional parts of
+// the square roots of the first eight primes), XOR'd with a version tag in
+// the first word so that digests produced by this revision are not
+// interchangeable with the previous, weaker revision.
+constexpr uint32_t IV[8] = {
+    0x6a09e667U ^ 0x01U,   // version tag: rev 2
+    0xbb67ae85U, 0x3c6ef372U, 0xa54ff53aU,
+    0x510e527fU, 0x9b05688cU, 0x1f83d9abU, 0x5be0cd19U,
+};
 
-    // suspaudimas norint pasiekt reikiama ilgi
+} // namespace
+
+// ============================================================================
+//  Core hash function
+// ============================================================================
+
+hash256 myHash(const uint8_t* data, size_t len) noexcept {
+    uint32_t s[8];
+
+    // ---- 1. Initialise the state ------------------------------------------
+    for (int i = 0; i < 8; ++i)
+        s[i] = IV[i] ^ (GOLDEN * static_cast<uint32_t>(i + 1));
+
+    // ---- 2. Absorb length, in both bytes and bits -------------------------
+    const uint64_t bits = static_cast<uint64_t>(len) * 8u;
+    s[0] ^= static_cast<uint32_t>(len);
+    s[1] ^= static_cast<uint32_t>(static_cast<uint64_t>(len) >> 32);
+    s[2] ^= static_cast<uint32_t>(bits);
+    s[3] ^= static_cast<uint32_t>(bits >> 32);
+
+    // ---- 3. Absorb the message -------------------------------------------
+    // Each byte perturbs three different words with three different
+    // combining operations (non-linear, additive, XOR) so that influence
+    // spreads quickly.
     for (size_t i = 0; i < len; ++i) {
-        uint32_t b = data[i];
-        int slot = i % 8;
+        const uint32_t b    = data[i];
+        const uint32_t idx  = static_cast<uint32_t>(i);
+        const int      slot = static_cast<int>(i & 7u);
 
-        s[slot] = mix32(s[slot] ^ (b + (uint32_t)i));
-        s[(slot + 3) & 7] += b;
-        s[(slot + 5) & 7] ^= mix32(b + (uint32_t)(i * 31));
+        s[slot]              = mix32(s[slot] ^ (b + GOLDEN * (idx + 1u)));
+        s[(slot + 3) & 7]   += b + PRIME1 * idx;
+        s[(slot + 5) & 7]   ^= mix32(b + PRIME2 * (idx + 1u));
     }
 
-    // maisa
-    for (int r = 0; r < 8; ++r) {
+    // ---- 4. Sponge terminator (0x80 byte) --------------------------------
+    // Guarantees that "abc" and "abc\0" reach different internal states,
+    // even ignoring the length field absorbed in step 2.
+    {
+        const uint32_t idx  = static_cast<uint32_t>(len);
+        const int      slot = static_cast<int>(len & 7u);
+        constexpr uint32_t pad = 0x80u;
+
+        s[slot]              = mix32(s[slot] ^ (pad + GOLDEN * (idx + 1u)));
+        s[(slot + 3) & 7]   += pad + PRIME1 * idx;
+        s[(slot + 5) & 7]   ^= mix32(pad + PRIME2 * (idx + 1u));
+    }
+
+    // ---- 5. Finalize ------------------------------------------------------
+    // 16 rounds (was 8).  Each round mixes every word with its neighbour,
+    // then the whole state is rotated by one word so that the fixed
+    // neighbour pattern does not create weak word pairs.
+    for (int r = 0; r < 16; ++r) {
+        const uint32_t rc = GOLDEN * static_cast<uint32_t>(r + 1);
+
         for (int i = 0; i < 8; ++i) {
-            s[i] = mix32(s[i] + s[(i + 1) & 7]);
+            s[i]            = mix32(s[i] + s[(i + 1) & 7] + rc);
             s[(i + 3) & 7] ^= s[i];
+            s[(i + 5) & 7] += rotl32(s[i], (i * 3 + 5) & 31);
         }
+
+        const uint32_t t = s[0];
+        for (int i = 0; i < 7; ++i) s[i] = s[i + 1];
+        s[7] = t;
     }
 
-    hash out;
+    hash256 out{};
     for (int i = 0; i < 8; ++i) out.w[i] = s[i];
     return out;
 }
 
-// 256 i 64 hex
-string toHex(const hash& h) {
+// ============================================================================
+//  I/O helpers
+// ============================================================================
+
+static std::string toHex(const hash256& h) {
     std::ostringstream os;
     os << std::hex << std::setfill('0');
-    for (int i = 0; i < 8; ++i) os << std::setw(8) << h.w[i];
+    for (int i = 0; i < 8; ++i)
+        os << std::setw(8) << h.w[i];
     return os.str();
 }
 
-// Read the entire contents of a binary file. Returns false on open failure.
-static bool read_file_binary(const char* path, string& out) {
+static bool read_file_binary(const char* path, std::string& out) {
     std::ifstream f(path, std::ios::binary | std::ios::ate);
     if (!f) return false;
-    std::streamsize n = f.tellg();
+
+    const std::streamsize n = f.tellg();
     if (n < 0) return false;
+
     f.seekg(0, std::ios::beg);
     out.resize(static_cast<size_t>(n));
     if (n > 0) {
-        f.read(out.data(), n);
+        f.read(&out[0], n);
         if (!f) return false;
     }
     return true;
 }
 
-// Read all of stdin in binary mode
-static bool read_stdin_binary(string& out) {
+static bool read_stdin_binary(std::string& out) {
 #ifdef _WIN32
     _setmode(_fileno(stdin), _O_BINARY);
 #endif
@@ -108,40 +179,72 @@ static bool read_stdin_binary(string& out) {
     return true;
 }
 
+static void print_usage(const char* prog) {
+    std::cout <<
+        "Usage: " << prog << " [options] [<string>]\n"
+        "\n"
+        "Compute the 256-bit myhash digest of the input.\n"
+        "\n"
+        "Options:\n"
+        "  -f, --file <path>    hash the contents of <path> (binary-safe)\n"
+        "  -s, --string <text>  hash the literal string <text>\n"
+        "  -h, --help           show this help and exit\n"
+        "      --version        show version information and exit\n"
+        "\n"
+        "With no arguments, reads binary data from standard input.\n"
+        "A bare positional argument is treated as a file path if it can be\n"
+        "opened, otherwise as a literal string (legacy behaviour).\n";
+}
+
+// ============================================================================
+//  Entry point
+// ============================================================================
+
 int main(int argc, char** argv) {
+#ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
+#endif
 
-    string data;
+    std::string data;
 
-    // Aiškios vėliavėlės:
-    //   -f <kelias>   skaityti baitus iš failo (saugus dvejetainis režimas, leidžiami NUL baitai)
-    //   -s <tekstas>  skaičiuoti nurodytos eilutės maišos reikšmę (per argv NUL baitų perduoti negalima)
-    //   (be argumentų) skaityti iš standartinės įvesties (stdin) dvejetainiu režimu
-    // Senoji elgsena: argv[1] laikomas failu, jei jį pavyksta atidaryti;
-    //                 priešingu atveju – tiesiogine teksto eilute.
-    if (argc >= 3 && std::strcmp(argv[1], "-f") == 0) {
-        if (!read_file_binary(argv[2], data)) {
-            std::cerr << "cannot open " << argv[2] << "\n";
-            return 1;
+    if (argc >= 2) {
+        const char* a1 = argv[1];
+
+        if (std::strcmp(a1, "-h") == 0 || std::strcmp(a1, "--help") == 0) {
+            print_usage(argv[0]);
+            return 0;
         }
-    }
-    else if (argc >= 3 && std::strcmp(argv[1], "-s") == 0) {
-        data = argv[2];
-    }
-    else if (argc == 1) {
-        if (!read_stdin_binary(data)) {
-            std::cerr << "failed to read stdin\n";
-            return 1;
+        if (std::strcmp(a1, "--version") == 0) {
+            std::cout << "myhash 2.0\n";
+            return 0;
+        }
+        if (std::strcmp(a1, "-f") == 0 || std::strcmp(a1, "--file") == 0) {
+            if (argc < 3) { print_usage(argv[0]); return 2; }
+            if (!read_file_binary(argv[2], data)) {
+                std::cerr << "myhash: cannot open " << argv[2] << "\n";
+                return 1;
+            }
+        }
+        else if (std::strcmp(a1, "-s") == 0 || std::strcmp(a1, "--string") == 0) {
+            if (argc < 3) { print_usage(argv[0]); return 2; }
+            data = argv[2];
+        }
+        else {
+            // Legacy behaviour: try as a file path first, else literal string.
+            if (!read_file_binary(a1, data))
+                data = a1;
         }
     }
     else {
-        if (!read_file_binary(argv[1], data)) {
-            data = argv[1];
+        if (!read_stdin_binary(data)) {
+            std::cerr << "myhash: failed to read stdin\n";
+            return 1;
         }
     }
 
-    hash h = myHash(reinterpret_cast<const uint8_t*>(data.data()), data.size());
+    const hash256 h = myHash(
+        reinterpret_cast<const uint8_t*>(data.data()), data.size());
     std::cout << toHex(h) << "\n";
     return 0;
 }
