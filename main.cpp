@@ -96,7 +96,7 @@ static bool read_file_binary(const char* path, string& out) {
     return true;
 }
 
-// Read all of stdin in binary mode (no CRLF translation, no Ctrl-Z EOF on Windows).
+// Read all of stdin in binary mode
 static bool read_stdin_binary(string& out) {
 #ifdef _WIN32
     _setmode(_fileno(stdin), _O_BINARY);
@@ -114,12 +114,12 @@ int main(int argc, char** argv) {
 
     string data;
 
-    // Explicit flags:
-    //   -f <path>   read bytes from a file (binary-safe, NULs OK)
-    //   -s <text>   hash the literal string (no NULs possible via argv)
-    //   (no args)   read stdin in binary mode
-    // Legacy:       a bare argv[1] is treated as a file if it opens,
-    //               otherwise as a literal string.
+    // Aiškios vėliavėlės:
+    //   -f <kelias>   skaityti baitus iš failo (saugus dvejetainis režimas, leidžiami NUL baitai)
+    //   -s <tekstas>  skaičiuoti nurodytos eilutės maišos reikšmę (per argv NUL baitų perduoti negalima)
+    //   (be argumentų) skaityti iš standartinės įvesties (stdin) dvejetainiu režimu
+    // Senoji elgsena: argv[1] laikomas failu, jei jį pavyksta atidaryti;
+    //                 priešingu atveju – tiesiogine teksto eilute.
     if (argc >= 3 && std::strcmp(argv[1], "-f") == 0) {
         if (!read_file_binary(argv[2], data)) {
             std::cerr << "cannot open " << argv[2] << "\n";
@@ -136,7 +136,6 @@ int main(int argc, char** argv) {
         }
     }
     else {
-        // Legacy behavior: argv[1] is a file if it opens, else a literal.
         if (!read_file_binary(argv[1], data)) {
             data = argv[1];
         }
