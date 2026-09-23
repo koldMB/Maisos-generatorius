@@ -326,8 +326,8 @@ Jei atskleidžiame r (pvz., hex: `a04a270775fa9f5398f7b3eae7aaf96f`), galime pat
 ### 8.2 Pagerėjimai
 
 - 256 bitų išvestis (8 × 32 b) — didesnė erdvė nei FNV-1a.
-- Bajtų padėtis (`i`) ir reikšmė (`b`) abi įtakoja maišą.
-- 8 raundų maišymo ciklas po bajtų apdorojimo.
+- Baitų padėtis (`i`) ir reikšmė (`b`) abi įtakoja maišą.
+- 8 raundų maišymo ciklas po baitų apdorojimo.
 - Ilgis įmaišomas į pradinę būseną (`s[0]`, `s[1]`).
 
 ### 8.3 Pablogėjimai
@@ -377,12 +377,10 @@ Jei atskleidžiame r (pvz., hex: `a04a270775fa9f5398f7b3eae7aaf96f`), galime pat
 
 | Parametras | Reikšmė |
 |---|---|
-| CPU | (įrašyti) |
-| RAM | (įrašyti) |
-| OS | (įrašyti) |
-| Kompiliavimo vėliavėlės | (įrašyti) |
-
-### B. Papildomi grafikai
+| CPU | AMD Ryzen 5 5600H |
+| RAM | 16GB DDR4 |
+| OS | Win 11 |
+| Kompiliavimo vėliavėlės | - |
 
 ### C. Šaltiniai
 
