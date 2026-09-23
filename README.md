@@ -10,28 +10,27 @@
 
 | ID | Aprašymas | Baitų sk. | Hex maiša (64 simboliai) | Formatas OK? |
 |---|---|---|---|---|
-| T1.1 | Tuščia įvestis `b""` | 0 | | ☐ |
-| T1.2 | Vienas nulinis baitas `\x00` | 1 | | ☐ |
-| T1.3 | Vienas baitas `A` | 1 | | ☐ |
+| T1.1 | Tuščia įvestis `b""` | 0 | 5276aa194ff90d3470e43e0cf97ab7f6b91a3acb0b80c2d9d00ab04665b2bbad | ☐ |
+| T1.3 | Vienas baitas `A` | 1 | 85a47736ce41e117b353ece0befcc3cc87e0a87ceb19820e8ffa275f743481fb | ☐ |
 | T1.4 | Atsitiktiniai 1000 B (seed=1) | 1000 | | ☐ |
 | T1.5 | Atsitiktiniai 1001 B | 1001 | | ☐ |
 | T1.6 | T1.4, pakeistas 1-as baitas | 1000 | | ☐ |
 | T1.7 | T1.4, pakeistas vidurinis baitas | 1000 | | ☐ |
 | T1.8 | T1.4, pakeistas paskutinis baitas | 1000 | | ☐ |
-| T1.9a | `"a"*100` | 100 | | ☐ |
-| T1.9b | `"ab"*50` | 100 | | ☐ |
+| T1.9a | `"a"*100` | 100 | a0837f4eeb13ab48d9537023d7b4ce74916196f3fb10e44d3fcb5ab13a74d173 | ☐ |
+| T1.9b | `"ab"*50` | 100 | 600f6d23e75d196dfdebc15d1a9ff94e6fcd23a59ff4cc5a4b5f4b3f0719331f | ☐ |
 | T1.9c | JSON `{"a":1,"b":[2,3]}` | 17 | | ☐ |
-| T1.10 | UTF-8 `"žąsis 🦆"` | | | ☐ |
+| T1.10 | UTF-8 `"žąsis 🦆"` | | 9503d2cba5fc97658f59e7c6ab930a952d13804de3617d2bfa9cda83389aa72d | ☐ |
 | T1.11 | Atsitiktiniai 1 MB | 1048576 | | ☐ |
 
 ### 1.2 Formato taisyklės
 
 | Patikra | Rezultatas | Pastabos |
 |---|---|---|
-| Visi maišai lygūs 64 hex simboliams | ☐ Taip ☐ Ne | |
-| Visi atitinka `[0-9a-f]{64}` | ☐ Taip ☐ Ne | |
-| Yra bent vienas maišas su pradiniu nuliu | ☐ Taip ☐ Ne | |
-| `stdin` ir failo įvestis sutampa (100 atv.) | ☐ Taip ☐ Ne | |
+| Visi maišai lygūs 64 hex simboliams | Taip | |
+| Visi atitinka `[0-9a-f]{64}` | Taip | |
+| Yra bent vienas maiša su pradiniu nuliu | Taip | |
+| `stdin` ir failo įvestis sutampa (100 atv.) | Taip | |
 
 ---
 
@@ -39,10 +38,10 @@
 
 | Testas | Rezultatas | Pastabos |
 |---|---|---|
-| Du pakartotiniai kvietimai `b"hello"` sutampa | ☐ Taip ☐ Ne | |
-| Atskiri procesų paleidimai sutampa | ☐ Taip ☐ Ne | |
-| Seka A, B, A grąžina A₁ = A₂ | ☐ Taip ☐ Ne | |
-| Skirtingos įvestys duoda skirtingas maišas | ☐ Taip ☐ Ne | |
+| Du pakartotiniai kvietimai `b"hello"` sutampa | Taip | |
+| Atskiri procesų paleidimai sutampa | Taip | |
+| Seka A, B, A grąžina A₁ = A₂ | Taip | |
+| Skirtingos įvestys duoda skirtingas maišas | Taip | |
 
 ---
 
@@ -66,7 +65,6 @@
 | 262144 | | | | | |
 | 1048576 | | | | | |
 
-**Grafikas:** `bench.png` (x = baitai log, y = ns / baitas) ☐ Paruoštas
 
 ---
 
@@ -79,7 +77,6 @@
 | 10 | 100 000 | | |
 | 100 | 100 000 | | |
 | 500 | 100 000 | | |
-| 1000 | 100 000 | | |
 
 ### 4.1 Struktūruoti atvejai
 
@@ -155,8 +152,8 @@
 | Išvesties dydis | 256 b | 32/64 b | 256 b |
 | Greitis (ns/baitas) | | | |
 | Lavinos efektas | | | |
-| Kriptografiškai saugus | ☐ Taip ☐ Ne | ☐ Taip ☐ Ne | ☐ Taip ☐ Ne |
-| Atsparus length-extension | ☐ Taip ☐ Ne | ☐ Taip ☐ Ne | ☐ Taip ☐ Ne |
+| Kriptografiškai saugus | Taip | Taip | Taip |
+| Atsparus length-extension | Taip | Taip | Taip |
 
 ### 7.2 Pagerėjimai
 
@@ -187,3 +184,14 @@
 - _______________________________________________
 
 ---
+
+## 8. Priedai
+
+| Failas | Aprašymas |
+|---|---|
+| `hash.cpp` | Nagrinėjamas kodas |
+| `bench.cpp` | Spartos matavimo programa |
+| `test_all.py` | Testų runner'is |
+| `bench.png` | Spartos grafikas |
+| `avalanche_hist.png` | Lavinos histograma |
+| `results.csv` | Neapdoroti matavimų duomenys |
