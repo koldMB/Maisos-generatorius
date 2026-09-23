@@ -382,7 +382,7 @@ Jei atskleidžiame r (pvz., hex: `a04a270775fa9f5398f7b3eae7aaf96f`), galime pat
 | OS | Win 11 |
 | Kompiliavimo vėliavėlės | - |
 
-### C. Šaltiniai
+### B. Šaltiniai
 
 * https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
 * https://en.wikipedia.org/wiki/Hash_function
