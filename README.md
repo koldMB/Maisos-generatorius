@@ -315,13 +315,13 @@ Jei atskleidžiame r (pvz., hex: `a04a270775fa9f5398f7b3eae7aaf96f`), galime pat
 
 ### 8.1 Versijų palyginimas
 
-| Kriterijus | Ši versija | FNV-1a | SHA-256 |
+| Kriterijus | v0.1 | SHA-256 | v0.2  |
 |---|---|---|---|
-| Išvesties dydis | 256 b | 32/64 b | 256 b |
-| Greitis (ns/baitas) | (žr. §3) | ~1–2 | ~10–20 |
-| Lavinos efektas | (žr. §5) | silpnas | stiprus |
-| Kriptografiškai saugus | **Ne** | **Ne** | **Taip** |
-| Atsparus length-extension | **Ne** | **Ne** | **Taip** |
+| Išvesties dydis | 256 b | 256 b |   |
+| Greitis (ns/baitas) | (žr. §3) | ~10–20 |   |
+| Lavinos efektas | (žr. §5) | stiprus |   |
+| Kriptografiškai saugus | **Ne** | **Taip** |   |
+| Atsparus length-extension | **Ne** | **Taip** |   |
 
 ### 8.2 Pagerėjimai
 
